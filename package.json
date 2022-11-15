@@ -1,0 +1,26 @@
+{
+  "name": "js-ring",
+  "version": "1.0.0",
+  "description": "IoC / DI for Clean Architecture in JavaScript projects",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "script": "node --es-module-specifier-resolution=node --experimental-modules",
+    "test": "npm run script -- node_modules/.bin/mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alex-alekseichuk/js-ring.git"
+  },
+  "keywords": ["IoC", "DI", "JavaScript"],
+  "author": "Alex Alekseichuk",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/alex-alekseichuk/js-ring/issues"
+  },
+  "homepage": "https://github.com/alex-alekseichuk/js-ring#readme",
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.1.0"
+  }
+}
