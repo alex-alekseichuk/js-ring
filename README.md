@@ -13,6 +13,8 @@ import { createContainer } from 'js-ring';
 const container = createContainer();
 ```
 
+The injection is done for factory functions.
+
 ## Tree of containers
 
 We can clone a child container from the parent container.
