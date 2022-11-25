@@ -28,17 +28,18 @@ export function createContainer() {
     },
 
     /**
-     * Added reference to object representing an interface of some dependency.
+     * Add the reference to be used as dependency.
      * By default, it's added as a proxy, so, later you can update it.
      * Besides, you can override it in child container.
      *
      * @param {string} name - The name of the dependency
      * @param {Object} ref - The service to be added to the container
+     * @param {boolean} directly - if true, the reference is added directly w/o proxy
      * @return {Object} Current container
      */
-    addRef(name, ref) {
+    addRef(name, ref, directly = false) {
       if (!this.hasOwnProperty(name)) {
-        if (typeof ref === 'function') {
+        if (typeof ref === 'function' || directly) {
           this[name] = ref;
 
           return this;
@@ -60,6 +61,17 @@ export function createContainer() {
       this[name] = ref;
 
       return this;
+    },
+
+    /**
+     * Add a reference directly.
+     *
+     * @param {string} name - The name of the dependency
+     * @param {Object} ref - The service to be added to the container
+     * @return {Object} Current container
+     */
+    addDirectly(name, ref) {
+      return this.addRef(name, ref, true);
     },
 
     /**
@@ -95,9 +107,10 @@ export function createContainer() {
      * @param {any} factory - Function to instantiate the instance with all dependencies
      * @param {Object} [dependencies] - Object with custom dependencies to override dependencies from the container
      * @param {string} [name] - Custom name to use instead of original one
+     * @param {boolean} directly - if true, the reference is added directly w/o proxy
      * @return {Object} Current container
      */
-    register(factory, dependencies, name) {
+    register(factory, dependencies, name, directly = false) {
       const self = this;
 
       if (typeof dependencies === 'string') {
@@ -106,9 +119,9 @@ export function createContainer() {
       }
 
       if (typeof factory !== 'function') {
-        if (name) self._add(name, factory);
-        else if (factory.__name) self._add(factory.__name, factory);
-        else if (factory.__components) self._add(null, factory);
+        if (name) self._add(name, factory, directly);
+        else if (factory.__name) self._add(factory.__name, factory, directly);
+        else if (factory.__components) self._add(null, factory, directly);
 
         return self;
       }
@@ -122,13 +135,15 @@ export function createContainer() {
         return ref
           .then((instance) => {
             if (instance) {
-              self._add(_name, instance);
+              self._add(_name, instance, directly);
             } else if (this.logger) this.logger.error(`Can't inject ${_name}`);
 
             return self;
           })
           .catch((err) => {
-            if (this.logger) this.logger.error(`Can't inject ${_name}`);
+            if (this.logger) this.logger.error(`Can't inject ${_name}: ${err.message}`);
+
+            return self;
           });
       }
 
@@ -137,26 +152,31 @@ export function createContainer() {
       if (!ref) {
         if (this.logger) this.logger.error(`Can't inject ${_name}`);
 
-        return this;
+        return self;
       }
-      this._add(_name, ref);
+      this._add(_name, ref, directly);
 
       return self;
+    },
+
+    registerDirectly(factory, dependencies, name) {
+      return this.register(factory, dependencies, name, true);
     },
 
     /**
      * Add single component or a set of interfaces from __components property
      * @param {string} name - the name of single component
      * @param {Object} ref - main component
+     * @param {boolean} directly - if true, the reference is added directly w/o proxy
      * @private
      */
-    _add(name, ref) {
+    _add(name, ref, directly) {
       if (ref.__components) {
-        for (const [key, value] of Object.entries(ref.__components)) this.addRef(key, value);
+        for (const [key, value] of Object.entries(ref.__components)) this.addRef(key, value, directly);
 
         return;
       }
-      if (name) this.addRef(name, ref);
+      if (name) this.addRef(name, ref, directly);
     },
   };
 }
