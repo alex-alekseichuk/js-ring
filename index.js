@@ -3,6 +3,8 @@
  * Almost all modules should be registered in the container, to be available later via DI.
  */
 
+const reIsClass = RegExp('^class ');
+
 /**
  * Create root container.
  * @return {Object} Context interface
@@ -83,22 +85,37 @@ export function createContainer() {
      * @return {Object} Returned by factory function
      */
     inject(factory, dependencies) {
-      const self = this;
-
       if (!factory || typeof factory !== 'function') return null;
 
-      const names = factory.__dependencies || getFuncArgs(factory);
+      let names = factory.__dependencies;
 
-      return factory.apply(this,
-        names.map((name) => {
-          if (dependencies && typeof dependencies[name] !== 'undefined') return dependencies[name];
-          if (name === 'container') return self;
-          if (!self[name] && self.logger) {
-            self.logger.warn(`Can't inject dependency: ${name}`);
-          }
+      const isClass = !!factory.toString().match(reIsClass);
 
-          return self[name];
-        }));
+      if (isClass) {
+        names = names || getClassArgs(factory);
+        if (!names) return null;
+        const args = this._injectArgs(names, dependencies);
+
+        return new factory(...args);
+      }
+      names = names || getFuncArgs(factory);
+      if (!names) return null;
+
+      return factory.apply(this, this._injectArgs(names, dependencies));
+    },
+
+    _injectArgs(names, dependencies) {
+      const self = this;
+
+      return names.map((name) => {
+        if (dependencies && typeof dependencies[name] !== 'undefined') return dependencies[name];
+        if (name === 'container') return self;
+        if (!self[name] && self.logger) {
+          self.logger.warn(`Can't inject dependency: ${name}`);
+        }
+
+        return self[name];
+      });
     },
 
     /**
@@ -181,22 +198,22 @@ export function createContainer() {
   };
 }
 
+const reRemoveBlockComment = RegExp('\\/\\*[\\s\\S]*?\\*\\/', 'g'); // Remove comments of the form /* ... */
+const reRemoveLineComment = RegExp('\\/\\/(.)*', 'g'); // Removing comments of the form //
+const reRemoveBody = RegExp('{[\\s\\S]*}'); // Remove body of the function { ... }
+const reRemoveArrow = RegExp('=>', 'g'); // removing '=>' if func is arrow function
+
 /**
  * Get arguments names of the function.
  * @param {function} func - target function
  * @return {Array} arrays of args names
  */
 function getFuncArgs(func) {
-  let str = func.toString();
-
-  // Remove comments of the form /* ... */
-  // Removing comments of the form //
-  // Remove body of the function { ... }
-  // removing '=>' if func is arrow function
-  str = str.replace(RegExp('\\/\\*[\\s\\S]*?\\*\\/', 'g'), '')
-    .replace(RegExp('\\/\\/(.)*', 'g'), '')
-    .replace(RegExp('{[\\s\\S]*}'), '')
-    .replace(RegExp('=>', 'g'), '')
+  const str = func.toString()
+    .replace(reRemoveBlockComment, '') // Remove comments of the form /* ... */
+    .replace(reRemoveLineComment, '') // Removing comments of the form //
+    .replace(reRemoveBody, '') // Remove body of the function { ... }
+    .replace(reRemoveArrow, '') // removing '=>' if func is arrow function
     .trim();
 
   // Start parameter names after first '('
@@ -205,9 +222,25 @@ function getFuncArgs(func) {
   // End parameter names is just before last ')'
   const end = str.length - 1;
 
-  const result = str.substring(start, end).split(',');
+  return getArgs(str.substring(start, end));
+}
 
-  return result
-    .map(element => element.replace(RegExp('=[\\s\\S]*', 'g'), '').trim())
+const reGetConstructor = new RegExp('constructor\\(([^)]*)\\)\\s*\\{');
+
+function getClassArgs(clazz) {
+  const match = clazz.toString().match(reGetConstructor);
+
+  if (!match || match.length < 2) {
+    return;
+  }
+
+  return getArgs(match[1].trim());
+}
+
+const reRemoveDefault = RegExp('=[\\s\\S]*', 'g');
+
+function getArgs(str) {
+  return str.split(',')
+    .map(element => element.replace(reRemoveDefault, '').trim())
     .filter(element => element.length > 0);
 }

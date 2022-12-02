@@ -6,7 +6,7 @@ function service1(ref1) {
 }
 const service2Factory = ref1 => new ServiceClass(ref1);
 
-class ServiceClass {
+export class ServiceClass {
   constructor(ref1) {
     this.ref1 = ref1;
   }
@@ -18,6 +18,8 @@ class ServiceClass {
 container
   .addRef('ref1', {f1: () => 'Ok'})
   .register(service1)
-  .register(service2Factory, 'service2');
+  .register(service2Factory, 'service2')
+  .register(ServiceClass);
 container.service1.f2();
 container.service2.f2();
+container.ServiceClass.f2();
