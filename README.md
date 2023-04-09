@@ -1,6 +1,26 @@
 # js-ring
 
-IoC / DI container for pure JavaScript projects.
+IoC / DI container for pure JavaScript projects
+
+`D` in SOLID means `Dependency Inversion`.
+Any enterprise solutions or a project should use such a tools.
+JavaScript is not an exception.
+I use this module
+to manage dependencies of the components
+in node.js and in-browser applications.
+
+A component is object or function returned by factory function.
+By default, the name of the component is the same as name of the factory function.
+Names of factory arguments are the names of other components used as dependencies.
+
+```javascript
+function component1(component2, component3) {
+  return {
+    method1: () => {},
+    method2: () => {}
+  };
+}
+```
 
 ## Container
 
